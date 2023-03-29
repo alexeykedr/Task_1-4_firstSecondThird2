@@ -1,60 +1,32 @@
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Semaphore;
+
 
 public class Foo {
-    static Lock lock = new ReentrantLock();
-
-
-    public boolean finished1 = false;
-    public boolean finished2 = false;
-    public boolean finished3 = false;
+    private final Semaphore s12 = new Semaphore(0);
+    private final Semaphore s23 = new Semaphore(0);
 
 
     public void first(Runnable r) {
-        try {
-            lock.lock();
-            while (!finished1) {
-                synchronized (Foo.class) {
-                    System.out.print("first");
-                    finished1 = true;
-                    second(r);
-                }
-            }
-        } finally {
-            lock.unlock();
-
-        }
+        System.out.print("first");
+        s12.release();
     }
 
     public void second(Runnable r) {
         try {
-
-            lock.lock();
-            while (!finished2 && finished1) {
-                synchronized (Foo.class) {
-                    System.out.print("second");
-                    finished2 = true;
-                    third(r);
-                    lock.unlock();
-                }
-            }
-        } finally {
-            lock.unlock();
+            s12.acquire();
+            System.out.print("second");
+            s23.release();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
     public void third(Runnable r) {
         try {
-
-            lock.lock();
-            while (!finished3 && finished2 && finished1) {
-                synchronized (Foo.class) {
-                    System.out.print("third");
-                    finished3 = true;
-                }
-            }
-        } finally {
-            lock.unlock();
+            s23.acquire();
+            System.out.print("third");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
